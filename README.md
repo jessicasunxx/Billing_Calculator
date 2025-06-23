@@ -713,4 +713,313 @@
                     <table class="data-table">
                         <thead>
                             <tr>
-                                ${Object.keys(csvData[0]).
+                                ${Object.keys(csvData[0]).map(header => `<th>${header}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${csvData.slice(0, 3).map(row => `
+                                <tr>
+                                    ${Object.values(row).map(value => `<td>${value || ''}</td>`).join('')}
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            document.getElementById('csvPreview').innerHTML = preview;
+        }
+
+        // Handle rate schedule change
+        function handleRateScheduleChange() {
+            const selectedKey = document.getElementById('rateSchedule').value;
+            currentRates = predefinedRates[selectedKey];
+            updateRateDisplay();
+            updateRateInputs();
+        }
+
+        // Update rate display information
+        function updateRateDisplay() {
+            document.getElementById('rateName').innerHTML = `<strong>${currentRates.name}</strong>`;
+            document.getElementById('rateDescription').textContent = currentRates.description;
+            document.getElementById('rateStructure').textContent = currentRates.timeStructure;
+        }
+
+        // Update rate input fields
+        function updateRateInputs() {
+            const isCustom = document.getElementById('rateSchedule').value === 'Custom Rate';
+            const isThreeTier = currentRates.midPeakRate !== undefined;
+            const rateInputsEl = document.getElementById('rateInputs');
+
+            // Clear and rebuild rate inputs
+            rateInputsEl.innerHTML = '';
+
+            if (isThreeTier) {
+                rateInputsEl.innerHTML = `
+                    <div class="form-group">
+                        <label class="form-label">Mid-Peak Rate ($/kWh)</label>
+                        <input type="number" id="midPeakRate" step="0.0001" value="${currentRates.midPeakRate}" class="form-input" ${!isCustom ? 'disabled' : ''}>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Off-Peak Rate ($/kWh)</label>
+                        <input type="number" id="offPeakRate" step="0.0001" value="${currentRates.offPeakRate}" class="form-input" ${!isCustom ? 'disabled' : ''}>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Super Off-Peak Rate ($/kWh)</label>
+                        <input type="number" id="superOffPeakRate" step="0.0001" value="${currentRates.superOffPeakRate}" class="form-input" ${!isCustom ? 'disabled' : ''}>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Baseline Credit ($/kWh)</label>
+                        <input type="number" id="baselineCredit" step="0.00001" value="${currentRates.baselineCredit}" class="form-input" ${!isCustom ? 'disabled' : ''}>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Solar Discount (%)</label>
+                        <input type="number" id="solarDiscount" step="0.1" value="${currentRates.solarDiscount}" class="form-input" ${!isCustom ? 'disabled' : ''}>
+                    </div>
+                `;
+            } else {
+                rateInputsEl.innerHTML = `
+                    <div class="form-group">
+                        <label class="form-label">On-Peak Rate ($/kWh)</label>
+                        <input type="number" id="onPeakRate" step="0.0001" value="${currentRates.onPeakRate}" class="form-input" ${!isCustom ? 'disabled' : ''}>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Off-Peak Rate ($/kWh)</label>
+                        <input type="number" id="offPeakRate" step="0.0001" value="${currentRates.offPeakRate}" class="form-input" ${!isCustom ? 'disabled' : ''}>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Baseline Credit ($/kWh)</label>
+                        <input type="number" id="baselineCredit" step="0.00001" value="${currentRates.baselineCredit}" class="form-input" ${!isCustom ? 'disabled' : ''}>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Solar Discount (%)</label>
+                        <input type="number" id="solarDiscount" step="0.1" value="${currentRates.solarDiscount}" class="form-input" ${!isCustom ? 'disabled' : ''}>
+                    </div>
+                `;
+            }
+        }
+
+        // Handle CARE status change
+        function handleCareStatusChange() {
+            const careStatus = document.getElementById('careStatus').value === 'true';
+            const careInfo = document.getElementById('careInfo');
+            
+            isCareCustomer = careStatus;
+            
+            if (careStatus) {
+                careInfo.style.display = 'block';
+                const utility = currentRates.utility;
+                const discountRate = CARE_DISCOUNTS[utility] * 100;
+                document.getElementById('careDiscountRate').textContent = 
+                    `Current discount: ${utility} customers receive ${discountRate.toFixed(2)}% discount`;
+            } else {
+                careInfo.style.display = 'none';
+            }
+        }
+
+        // Get current rates from inputs
+        function getCurrentRates() {
+            const midPeakInput = document.getElementById('midPeakRate');
+            const onPeakInput = document.getElementById('onPeakRate');
+            const offPeakInput = document.getElementById('offPeakRate');
+            const superOffPeakInput = document.getElementById('superOffPeakRate');
+            const baselineCreditInput = document.getElementById('baselineCredit');
+            const solarDiscountInput = document.getElementById('solarDiscount');
+
+            return {
+                midPeakRate: midPeakInput ? parseFloat(midPeakInput.value) : undefined,
+                onPeak: onPeakInput ? parseFloat(onPeakInput.value) : undefined,
+                offPeak: parseFloat(offPeakInput?.value || 0),
+                superOffPeak: superOffPeakInput ? parseFloat(superOffPeakInput.value) : undefined,
+                baselineCredit: parseFloat(baselineCreditInput?.value || 0),
+                solarDiscount: parseFloat(solarDiscountInput?.value || 0)
+            };
+        }
+
+        // Get current usage from inputs
+        function getCurrentUsage() {
+            const onPeakUsageEl = document.getElementById('onPeakUsage');
+            const offPeakUsageEl = document.getElementById('offPeakUsage');
+            const baselineCreditUsageEl = document.getElementById('baselineCreditUsage');
+            
+            const usage = {
+                onPeak: parseFloat(onPeakUsageEl?.value || 0),
+                offPeak: parseFloat(offPeakUsageEl?.value || 0),
+                baselineCredit: parseFloat(baselineCreditUsageEl?.value || 0),
+                superOffPeak: 0 // Default to 0, can be modified for three-tier rates
+            };
+            
+            // For three-tier rates, map on-peak to mid-peak
+            if (currentRates.midPeakRate !== undefined) {
+                usage.midPeak = usage.onPeak;
+                usage.onPeak = 0; // Set to 0 for three-tier rates
+            }
+            
+            return usage;
+        }
+
+        // Calculate solar savings
+        function calculateSolarSavings() {
+            const rates = getCurrentRates();
+            const usage = getCurrentUsage();
+            const isThreeTier = rates.midPeakRate !== undefined;
+
+            let energyCosts = {};
+            let totalEnergyCost = 0;
+
+            if (isThreeTier) {
+                energyCosts.midPeakCost = usage.midPeak * rates.midPeakRate;
+                energyCosts.offPeakCost = usage.offPeak * rates.offPeak;
+                energyCosts.superOffPeakCost = usage.superOffPeak * (rates.superOffPeak || 0);
+                totalEnergyCost = energyCosts.midPeakCost + energyCosts.offPeakCost + energyCosts.superOffPeakCost;
+            } else {
+                energyCosts.onPeakCost = usage.onPeak * rates.onPeak;
+                energyCosts.offPeakCost = usage.offPeak * rates.offPeak;
+                totalEnergyCost = energyCosts.onPeakCost + energyCosts.offPeakCost;
+            }
+
+            const baselineCreditAmount = usage.baselineCredit * rates.baselineCredit;
+            const subtotal = totalEnergyCost - baselineCreditAmount;
+            
+            let careDiscountAmount = 0;
+            let afterCareDiscount = subtotal;
+            
+            // Apply CARE discount if customer is on CARE program
+            if (isCareCustomer) {
+                const careDiscountRate = CARE_DISCOUNTS[currentRates.utility] || 0;
+                careDiscountAmount = subtotal * careDiscountRate;
+                afterCareDiscount = subtotal - careDiscountAmount;
+            }
+            
+            const solarDiscountAmount = afterCareDiscount * (rates.solarDiscount / 100);
+            const finalAmount = afterCareDiscount - solarDiscountAmount;
+            
+            const totalKwh = usage.onPeak + usage.offPeak + usage.superOffPeak + usage.midPeak;
+            const avgRatePerKwh = totalKwh > 0 ? finalAmount / totalKwh : 0;
+            const co2Saved = totalKwh * 0.284; // kg CO2 per kWh
+            const milesEquivalent = co2Saved * 2.5; // miles of driving equivalent
+
+            calculations = {
+                ...energyCosts,
+                baselineCreditAmount: baselineCreditAmount,
+                subtotal: subtotal,
+                careDiscountAmount: careDiscountAmount,
+                afterCareDiscount: afterCareDiscount,
+                solarDiscountAmount: solarDiscountAmount,
+                finalAmount: finalAmount,
+                totalKwh: totalKwh,
+                avgRatePerKwh: avgRatePerKwh,
+                co2Saved: co2Saved,
+                milesEquivalent: milesEquivalent,
+                isThreeTier: isThreeTier,
+                isCareCustomer: isCareCustomer
+            };
+
+            displayResults();
+        }
+
+        // Display calculation results
+        function displayResults() {
+            const isThreeTier = calculations.isThreeTier;
+            const isCare = calculations.isCareCustomer;
+            
+            // Update results title
+            document.getElementById('resultsTitle').textContent = 
+                `Solar Energy Calculation Results ${isCare ? '(CARE Customer)' : ''}`;
+            
+            const costBreakdown = isThreeTier ? `
+                <div class="result-item">
+                    <span>Mid-Peak Cost:</span>
+                    <span class="result-value">${calculations.midPeakCost?.toFixed(2) || '0.00'}</span>
+                </div>
+                <div class="result-item">
+                    <span>Off-Peak Cost:</span>
+                    <span class="result-value">${calculations.offPeakCost?.toFixed(2) || '0.00'}</span>
+                </div>
+                <div class="result-item">
+                    <span>Super Off-Peak Cost:</span>
+                    <span class="result-value">${calculations.superOffPeakCost?.toFixed(2) || '0.00'}</span>
+                </div>
+            ` : `
+                <div class="result-item">
+                    <span>On-Peak Cost:</span>
+                    <span class="result-value">${calculations.onPeakCost?.toFixed(2) || '0.00'}</span>
+                </div>
+                <div class="result-item">
+                    <span>Off-Peak Cost:</span>
+                    <span class="result-value">${calculations.offPeakCost?.toFixed(2) || '0.00'}</span>
+                </div>
+            `;
+
+            const careSection = isCare ? `
+                <div class="result-item">
+                    <span>CARE Discount:</span>
+                    <span class="result-value positive">-${calculations.careDiscountAmount?.toFixed(2) || '0.00'}</span>
+                </div>
+                <div class="result-item">
+                    <span>After CARE Discount:</span>
+                    <span class="result-value">${calculations.afterCareDiscount?.toFixed(2) || '0.00'}</span>
+                </div>
+            ` : '';
+
+            document.getElementById('resultsContent').innerHTML = `
+                <div class="results-grid">
+                    <div>
+                        ${costBreakdown}
+                        <div class="result-item">
+                            <span>Baseline Credit:</span>
+                            <span class="result-value positive">-${calculations.baselineCreditAmount?.toFixed(2) || '0.00'}</span>
+                        </div>
+                        <div class="result-item total">
+                            <span>Subtotal:</span>
+                            <span class="result-value">${calculations.subtotal?.toFixed(2) || '0.00'}</span>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        ${careSection}
+                        <div class="result-item">
+                            <span>Solar Discount:</span>
+                            <span class="result-value positive">-${calculations.solarDiscountAmount?.toFixed(2) || '0.00'}</span>
+                        </div>
+                        <div class="result-item total">
+                            <span><strong>Final Amount:</strong></span>
+                            <span class="result-value large">${calculations.finalAmount?.toFixed(2) || '0.00'}</span>
+                        </div>
+                        <div class="result-item">
+                            <span>Total kWh:</span>
+                            <span class="result-value">${calculations.totalKwh?.toFixed(3) || '0.000'}</span>
+                        </div>
+                        <div class="result-item">
+                            <span>Avg Rate/kWh:</span>
+                            <span class="result-value">${calculations.avgRatePerKwh?.toFixed(4) || '0.0000'}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('environmentalResults').innerHTML = `
+                <div class="env-card green">
+                    <div class="env-value green">${calculations.co2Saved?.toFixed(1) || '0.0'} kg</div>
+                    <div class="env-label green">CO₂ Emissions Saved</div>
+                </div>
+                <div class="env-card orange">
+                    <div class="env-value orange">${calculations.milesEquivalent?.toFixed(0) || '0'}</div>
+                    <div class="env-label orange">Miles of Driving Equivalent</div>
+                </div>
+            `;
+
+            // Show results section with animation
+            document.getElementById('resultsSection').classList.add('show');
+            
+            // Scroll to results
+            document.getElementById('resultsSection').scrollIntoView({ 
+                behavior: 'smooth',
+                block: 'start'
+            });
+        }
+
+        // Initialize the application when the page loads
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
