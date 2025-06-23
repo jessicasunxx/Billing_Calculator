@@ -1,0 +1,8 @@
+subscriber_id,account_id,tariff_code,utility,season,is_care,on_peak_usage,off_peak_usage,mid_peak_usage,super_off_peak_usage,baseline_credit,rate_criteria,billing_start,billing_end
+700232948440589,180,E-TOU-C-NEM2,PG&E,winter,false,8.5,145.2,0,0,153.7,None,2025-02-01,2025-03-01
+700232943199617,432,EL-TOU-C-NEM2,PG&E,winter,true,6.2,98.4,0,0,104.6,CARE,2025-02-01,2025-03-01
+954315962804160,50893,EL-TOU-C-EH-NEM2,PG&E,winter,true,12.8,185.6,0,0,198.4,CARE,2025-02-01,2025-03-01
+371003287380944,50966,E-TOU-C-EH-NEM2,PG&E,winter,false,15.2,220.8,0,0,236.0,None,2025-02-01,2025-03-01
+700232944861926,61023,E-TOU-D-NEM2,PG&E,winter,false,6.333,126.074,0,0,132.407,None,2025-02-01,2025-03-01
+700000000000001,12345,TOU-D-4-9PM-NEM2,SCE,winter,false,0,95.3,8.5,22.1,125.9,None,2025-02-01,2025-03-01
+700000000000002,12346,TOU-D-4-9PM-NEM2,SCE,winter,true,0,78.2,6.8,18.5,103.5,CARE,2025-02-01,2025-03-01
